@@ -49,7 +49,7 @@
     <button id="controlButton">Controlar</button>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
-        const socket = io('https://chatjs-mxcc.vercel.app', { transports: ['websocket'] });
+        const socket = io('http://localhost:3000', { transports: ['websocket'] });
 
         socket.on('message', (data) => {
             console.log(data);
