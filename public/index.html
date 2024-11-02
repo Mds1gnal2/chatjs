@@ -49,39 +49,18 @@
     <button id="controlButton">Controlar</button>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
-        const socket = io();
-        const startButton = document.getElementById('startButton');
-        const controlButton = document.getElementById('controlButton');
-        const videoElement = document.getElementById('video');
+        const socket = io('http://localhost:3000', { transports: ['websocket'] });
 
-        let localStream;
-        let peerConnection;
-
-        const config = {
-            iceServers: [
-                {
-                    urls: 'stun:stun.l.google.com:19302'
-                }
-            ]
-        };
-
-        startButton.addEventListener('click', async () => {
-            try {
-                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                videoElement.srcObject = localStream;
-
-                peerConnection = new RTCPeerConnection(config);
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                socket.emit('offer', offer);
-            } catch (err) {
-                console.error('Error: ' + err);
-            }
+        socket.on('message', (data) => {
+            console.log(data);
         });
 
-        controlButton.addEventListener('click', () => {
+        document.getElementById('startButton').addEventListener('click', async () => {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            document.getElementById('video').srcObject = stream;
+        });
+
+        document.getElementById('controlButton').addEventListener('click', () => {
             document.addEventListener('mousemove', (event) => {
                 socket.emit('control', { type: 'mousemove', x: event.clientX, y: event.clientY });
             });
@@ -89,36 +68,6 @@
             document.addEventListener('click', (event) => {
                 socket.emit('control', { type: 'click', x: event.clientX, y: event.clientY });
             });
-        });
-
-        socket.on('offer', async (data) => {
-            peerConnection = new RTCPeerConnection(config);
-            peerConnection.ontrack = (event) => {
-                videoElement.srcObject = event.streams[0];
-            };
-
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit('answer', answer);
-        });
-
-        socket.on('answer', async (data) => {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-        });
-
-        socket.on('candidate', async (data) => {
-            const candidate = new RTCIceCandidate(data);
-            await peerConnection.addIceCandidate(candidate);
-        });
-
-        socket.on('control', (data) => {
-            if (data.type === 'mousemove') {
-                document.elementFromPoint(data.x, data.y)?.dispatchEvent(new MouseEvent('mousemove', { clientX: data.x, clientY: data.y }));
-            } else if (data.type === 'click') {
-                document.elementFromPoint(data.x, data.y)?.dispatchEvent(new MouseEvent('click', { clientX: data.x, clientY: data.y }));
-            }
         });
     </script>
 </body>
